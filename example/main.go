@@ -4,12 +4,12 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math/rand"
 	"strings"
 	"time"
-	"math/rand"
 
-	"tinygo.org/x/bluetooth"
 	"dotpad"
+	"tinygo.org/x/bluetooth"
 )
 
 var (
@@ -30,7 +30,7 @@ func main() {
 			var sb strings.Builder
 
 			for i := 0; i < dotpad.GraphicLen; i++ {
-				sb.WriteString(fmt.Sprintf("%02x", i % 0xFF))
+				sb.WriteString(fmt.Sprintf("%02x", i%0xFF))
 			}
 
 			hexData = sb.String()
@@ -57,7 +57,7 @@ func main() {
 	if err := sdk.AddListenerKeyEvent(device, func(code string) {
 		log.Printf("key event: %s", code)
 
-		switch(code) {
+		switch code {
 		case dotpad.LP:
 			if err := sdk.ResetTextData(device); err != nil {
 				log.Println("Error clearing text")
