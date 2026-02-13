@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"dotpad"
-	"tinygo.org/x/bluetooth"
 )
 
 var (
@@ -37,16 +36,14 @@ func main() {
 		}
 	}
 
-	adapter := bluetooth.DefaultAdapter
-	if err := adapter.Enable(); err != nil {
-		log.Fatalf("enable adapter: %v", err)
+	sdk := dotpad.NewDotPadSDK()
+
+	log.Println("connecting...")
+	device, err := sdk.Request(10 * time.Second)
+	if err != nil {
+		log.Fatalf("connect to device: %v", err)
 	}
 
-	sdk := dotpad.NewDotPadSDK()
-	device, err := sdk.Request(adapter, 10*time.Second)
-	if err != nil {
-		log.Fatalf("request device: %v", err)
-	}
 	log.Println("connected...")
 	defer func() {
 		if err := sdk.Disconnect(device); err != nil {

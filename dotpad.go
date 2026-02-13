@@ -59,7 +59,11 @@ func NewDotPadSDK() *DotPadSDK {
 
 // Request scans for a DotPad device and connects to it.
 // The adapter must be enabled before calling this method.
-func (s *DotPadSDK) Request(adapter *bluetooth.Adapter, timeout time.Duration) (bluetooth.Device, error) {
+func (s *DotPadSDK) Request(timeout time.Duration) (bluetooth.Device, error) {
+	adapter := bluetooth.DefaultAdapter
+	if err := adapter.Enable(); err != nil {
+		return bluetooth.Device{}, err
+	}
 	if adapter == nil {
 		return bluetooth.Device{}, errors.New("adapter is nil")
 	}
