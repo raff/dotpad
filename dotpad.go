@@ -42,6 +42,7 @@ type DotPadSDK struct {
 	DotPadPrefix         string
 	DotPadService        string
 	DotPadCharacteristic string
+	DotPadName	     string
 
 	ackPattern  *regexp.Regexp
 	notiPattern *regexp.Regexp
@@ -68,12 +69,16 @@ func (s *DotPadSDK) Request(timeout time.Duration) (bluetooth.Device, error) {
 		return bluetooth.Device{}, errors.New("adapter is nil")
 	}
 
+	s.DotPadName = ""
+
 	ch := make(chan bluetooth.ScanResult, 1)
 	err := adapter.Scan(func(adapter *bluetooth.Adapter, result bluetooth.ScanResult) {
 		name := result.LocalName()
 		if !strings.HasPrefix(name, s.DotPadPrefix) {
 			return
 		}
+
+		s.DotPadName = name
 		_ = adapter.StopScan()
 		select {
 		case ch <- result:
@@ -695,6 +700,7 @@ func strconvParseHex(s string) (int, error) {
 // ASCIIToBrailleDots maps ASCII character to Braille dot pattern (6 bits).
 // Bits are inverted: dot positions 1-6 in the table become 6-1 (reversed).
 // Value is stored as binary literal 0b{d6}{d5}{d4}{d3}{d2}{d1}.
+// Note that uppercase letters use 8 bits dot pattern and set bit "7" to signal the case
 var ASCIIToBrailleDots = map[rune]uint8{
 	' ':  0b000000,  // 20 000000
 	'!':  0b101110,  // 21 011101
@@ -802,11 +808,22 @@ func ToBrailleUnicode(s string) string {
 	return result.String()
 }
 
-func ToBrailleHex(s string) string {
+func ToBrailleHex(s string, graphic bool) string {
 	var result strings.Builder
 
 	for _, char := range s {
 		if dots, ok := ASCIIToBrailleDots[char]; ok {
+			if graphic {
+				// in text mode characters use bits 1-3 and 4-6 (7 is the case)
+				// in graphic mode they use bits 1-4 and 5-8, so we need to flip 4,5,6,7
+				l1 := (dots & 0b000111) >> 0 // bits 1-3
+				l2 := (dots & 0b111000) >> 3 // bits 4-6
+				l1 |= ((dots & 0b01000000) >> 6) << 3 // add bit 7
+				l2 |= ((dots & 0b10000000) >> 7) << 3 // add bit 8
+
+				dots = l2 << 4 | l1
+			}
+
 			fmt.Fprintf(&result, "%02x", dots)
 		} else {
 			fmt.Fprintf(&result, "00", dots)
@@ -814,4 +831,12 @@ func ToBrailleHex(s string) string {
 	}
 
 	return result.String()
+}
+
+func ToTextBrailleHex(s string) string {
+	return ToBrailleHex(s, false)
+}
+
+func ToGraphicBrailleHex(s string) string {
+	return ToBrailleHex(s, true)
 }

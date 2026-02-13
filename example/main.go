@@ -17,6 +17,8 @@ var (
 
 func main() {
 	text := flag.Bool("text", false, "display as text (vs. graphic")
+	hex := flag.Bool("hex", false, "the input is already an hexadecimal string")
+	uni := flag.Bool("unicode", false, "print Braille unicode")
 	cclear := flag.Bool("clear", false, "clear before display")
 	flag.Parse()
 
@@ -34,6 +36,16 @@ func main() {
 
 			hexData = sb.String()
 		}
+	} else if *hex {
+		hexData = strings.Join(flag.Args(), "")
+	} else {
+		textData := strings.Join(flag.Args(), " ")
+		hexData = dotpad.ToBrailleHex(textData, ! *text)
+
+		if *uni {
+			fmt.Println(dotpad.ToBrailleUnicode(textData))
+			fmt.Println(dotpad.ToBrailleHex(textData, false))
+		}
 	}
 
 	sdk := dotpad.NewDotPadSDK()
@@ -44,7 +56,7 @@ func main() {
 		log.Fatalf("connect to device: %v", err)
 	}
 
-	log.Println("connected...")
+	log.Println("connected to", sdk.DotPadName)
 	defer func() {
 		if err := sdk.Disconnect(device); err != nil {
 			log.Printf("disconnect: %v", err)
